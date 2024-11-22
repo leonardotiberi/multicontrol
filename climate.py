@@ -19,52 +19,43 @@ async def async_setup_platform(  # noqa: D103
         return
 
     nodes = await hass.data["multicontrol"]["coordinator"].getNodes()
-    for id, name in nodes.items():
+    for idx, node in nodes.items():
         add_entities(
-            [MulticontrolClimate(hass.data["multicontrol"]["coordinator"], id, name)]
+            [MulticontrolClimate(hass.data["multicontrol"]["coordinator"], idx, node)]
         )
 
 
 class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
-    def __init__(self, coordinator, idx, name) -> None:  # noqa: D107
+    def __init__(self, coordinator, idx, node) -> None:  # noqa: D107
         super().__init__(coordinator, context=idx)
 
         self.idx = idx
         self._available = False
 
-        self._attr_name = f"Termostato {name}"
+        self._attr_name = f"Termostato {node["name"]}"
         self._attr_unique_id = f"multicontrol_climate_{idx}"
 
         self._attr_hvac_modes = ["off", "cool", "heat"]
-        self._attr_hvac_mode = "off"
 
         self._attr_temperature_unit = "°C"
 
-        self._attr_target_temperature_high = 26
-        self._attr_target_temperature_low = 14
-        self._attr_target_temperature_step = 0.1
+        self._attr_target_temperature_high = 26 # cercare configurazione temp_setpoint_max
+        self._attr_target_temperature_low = 14 # cercare configurazione temp_setpoint_max
+        self._attr_target_temperature_step = 0.1  # cercare configurazione temp_step
 
-        self._attr_max_temp = 26
-        self._attr_min_temp = 14
+        self._attr_max_temp = 26 # cercare configurazione temp_setpoint_max
+        self._attr_min_temp = 14  # cercare configurazione temp_setpoint_min
 
-        self._attr_max_humidity = 3
-        self._attr_min_humidity = -3
+        if node["config"]["fanSupport"]: # cercare fan_speed su config?
+            self._attr_supported_features = (ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.TARGET_TEMPERATURE)
+        else:
+            self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
-        self._attr_supported_features = (ClimateEntityFeature.TARGET_TEMPERATURE)
-        # self._attr_supported_features = (
-        #     ClimateEntityFeature.FAN_MODE
-        #     | ClimateEntityFeature.TARGET_TEMPERATURE
-        # )
-
-        self.data = {}
+        self.data = {} # unificare GetNodes e GetParams per ottenere subito i dati
 
     @property
     def available(self) -> bool:  # noqa: D102
         return self.data.get("connected", False)
-
-    # @property
-    # def is_on(self):
-    #     return self.data.get("radiant_enabled", False)
 
     @property
     def target_temperature(self) -> float | None:  # noqa: D102
@@ -94,14 +85,6 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
     def _handle_coordinator_update(self) -> None:
         self.data = self.coordinator.data[self.idx]
         self.async_write_ha_state()
-
-    # async def async_turn_on(self) -> None:
-    #     await self.coordinator.setOn(self.idx)
-    #     await self.coordinator.async_request_refresh()
-
-    # async def async_turn_off(self) -> None:
-    #     await self.coordinator.setOff(self.idx)
-    #     await self.coordinator.async_request_refresh()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:  # noqa: D102
         match hvac_mode:
