@@ -19,7 +19,8 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Required("password"): cv.string
             }
         )
-    }
+    },
+    extra = vol.ALLOW_EXTRA
 )
 
 async def async_setup(hass, config):
