@@ -7,6 +7,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers import config_validation as cv
 import voluptuous as vol
+
 DOMAIN = "multicontrol"
 
 _LOGGER = logging.getLogger(DOMAIN)
@@ -14,14 +15,12 @@ _LOGGER = logging.getLogger(DOMAIN)
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema(
-            {
-                vol.Required("username") :cv.string,
-                vol.Required("password"): cv.string
-            }
+            {vol.Required("username"): cv.string, vol.Required("password"): cv.string}
         )
     },
-    extra = vol.ALLOW_EXTRA
+    extra=vol.ALLOW_EXTRA,
 )
+
 
 async def async_setup(hass, config):
     hass.data["multicontrol"] = {"coordinator": MulticontrolCoordinator(hass, config)}
@@ -83,9 +82,14 @@ class MulticontrolCoordinator(DataUpdateCoordinator):
 
         nodes = {}
         for node in data["node_details"]:
+            configs = {}
+            for config in node["config"]["devices"][0]["params"]:
+                configs[config["name"]] = config
+
             params = node["params"]["multicontrol"]
             nodes[node["id"]] = {
                 "id": node["id"],
+                "config": configs,
                 "connected": node["status"]["connectivity"]["connected"],
                 "name": params["Name"],
                 "alarm": params["alarm"],
@@ -102,6 +106,8 @@ class MulticontrolCoordinator(DataUpdateCoordinator):
                 "season_automatic": params["season_automatic"],
                 "temp": params["temp"],
                 "temp_setpoint": params["temp_setpoint"],
+                # fan params
+                "fan_speed": params.get("fan_speed"),
             }
         return nodes
 
@@ -131,7 +137,10 @@ class MulticontrolCoordinator(DataUpdateCoordinator):
             self.api_url + "user/nodes/params",
             headers=headers,
             json=[
-                {"node_id": idx, "payload": {"multicontrol": {"radiant_enabled": True}}} # set season
+                {
+                    "node_id": idx,
+                    "payload": {"multicontrol": {"radiant_enabled": True}},
+                }  # set season
             ],
         ) as response:
             if response.status == 207:
@@ -150,7 +159,9 @@ class MulticontrolCoordinator(DataUpdateCoordinator):
             json=[
                 {
                     "node_id": idx,
-                    "payload": {"multicontrol": {"radiant_enabled": False}}, # set season
+                    "payload": {
+                        "multicontrol": {"radiant_enabled": False}
+                    },  # set season
                 }
             ],
         ) as response:
@@ -176,5 +187,25 @@ class MulticontrolCoordinator(DataUpdateCoordinator):
         ) as response:
             if response.status == 207:
                 _LOGGER.info("Set off ok")
+            else:
+                _LOGGER.error("Ger params fail")
+
+    async def setFanSpeed(self, idx, speed) -> None:
+        await self.login()
+
+        _LOGGER.debug("Set fan speed")
+        headers = {"Authorization": self.api_token}
+        async with self.session.put(
+            self.api_url + "user/nodes/params",
+            headers=headers,
+            json=[
+                {
+                    "node_id": idx,
+                    "payload": {"multicontrol": {"fan_speed": speed}},
+                }
+            ],
+        ) as response:
+            if response.status == 207:
+                _LOGGER.info("Set fan speed ok")
             else:
                 _LOGGER.error("Ger params fail")
