@@ -41,14 +41,14 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
 
         self._attr_temperature_unit = "°C"
 
-        self._attr_target_temperature_high = 26
-        self._attr_target_temperature_low = 14
-        self._attr_target_temperature_step = 0.1
+        config_temp = node["config"].get("temp_setpoint", None)
+        if config_temp is not None:
+            self._attr_target_temperature_high = config_temp["bounds"]["max"]
+            self._attr_target_temperature_low = config_temp["bounds"]["min"]
+            self._attr_target_temperature_step = config_temp["bounds"]["step"]
 
-		config_temp = node["config"].get("temp", None)
-		if(config_temp is not None):
-			self._attr_max_temp = config.["bound"]["min"]
-			self._attr_min_temp = config.["bound"]["max"]
+            self._attr_max_temp = config_temp["bounds"]["max"]
+            self._attr_min_temp = config_temp["bounds"]["min"]
 
         if fan_support:
             self._attr_fan_modes = ("off", "low", "medium", "high")
@@ -118,8 +118,6 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
     @property
     def fan_mode(self):
         speed = self.data.get("fan_speed", 0)
-        print(speed)
-        print(self.data)
         if speed == 1:
             return "low"
         elif speed == 2:
