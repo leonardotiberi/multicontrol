@@ -26,6 +26,7 @@ CONFIG_SCHEMA = vol.Schema(
 async def async_setup(hass, config):
     hass.data["multicontrol"] = {"coordinator": MulticontrolCoordinator(hass, config)}
     hass.helpers.discovery.load_platform(Platform.CLIMATE, DOMAIN, {}, config)
+    hass.helpers.discovery.load_platform(Platform.VALVE, DOMAIN, {}, config)
     return True
 
 
