@@ -33,9 +33,6 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
         self._available = False
 
         fan_support = node["config"].get("fan_speed", None) is not None
-        if node["name"] == "Lavanderia":
-            print(fan_support)
-            print(node["config"])
 
         self._attr_name = f"Termostato {node["name"]}"
         self._attr_unique_id = f"multicontrol_climate_{idx}"
@@ -44,16 +41,14 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
 
         self._attr_temperature_unit = "°C"
 
-        self._attr_target_temperature_high = (
-            26  # cercare configurazione temp_setpoint_max
-        )
-        self._attr_target_temperature_low = (
-            14  # cercare configurazione temp_setpoint_max
-        )
-        self._attr_target_temperature_step = 0.1  # cercare configurazione temp_step
+        self._attr_target_temperature_high = 26
+        self._attr_target_temperature_low = 14
+        self._attr_target_temperature_step = 0.1
 
-        self._attr_max_temp = 26  # cercare configurazione temp_setpoint_max
-        self._attr_min_temp = 14  # cercare configurazione temp_setpoint_min
+		config_temp = node["config"].get("temp", None)
+		if(config_temp is not None):
+			self._attr_max_temp = config.["bound"]["min"]
+			self._attr_min_temp = config.["bound"]["max"]
 
         if fan_support:
             self._attr_fan_modes = ("off", "low", "medium", "high")
@@ -93,19 +88,6 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
             return HVACMode.COOL
         return HVACMode.OFF
 
-    @property
-    def fan_mode(self):
-        speed = self.data.get("fan_speed", 0)
-        print(speed)
-        print(self.data)
-        if speed == 1:
-            return "low"
-        elif speed == 2:
-            return "medium"
-        elif speed == 3:
-            return "high"
-        return "off"
-
     @callback
     def _handle_coordinator_update(self) -> None:
         self.data = self.coordinator.data[self.idx]
@@ -132,6 +114,19 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
         )
         self._attr_target_temperature = target_temperature
         await self.coordinator.async_request_refresh()
+
+    @property
+    def fan_mode(self):
+        speed = self.data.get("fan_speed", 0)
+        print(speed)
+        print(self.data)
+        if speed == 1:
+            return "low"
+        elif speed == 2:
+            return "medium"
+        elif speed == 3:
+            return "high"
+        return "off"
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         mode = 0
