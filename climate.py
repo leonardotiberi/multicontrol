@@ -118,7 +118,7 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
     @property
     def fan_mode(self) -> str:
         speed = self.data.get("fan_speed", 0)
-        return ["off", "low", "medium", "hight"][speed]
+        return ["off", "low", "medium", "high"][speed]
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         mode = 0
