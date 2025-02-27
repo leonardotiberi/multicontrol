@@ -1,10 +1,9 @@
 {
-    "domain": "multicontrol",
-    "name": "Zehnder Multicontol",
-    "version": "0.0.1",
-    "documentation": "https://sistema3.it",
-    "requirements": [],
-    "dependencies": [],
-    "codeowners": ["@leonadotiberi"]
-  }
-  
+  "domain": "multicontrol",
+  "name": "Zehnder Multicontol",
+  "version": "0.0.3",
+  "documentation": "https://sistema3.it",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@leonadotiberi"]
+}

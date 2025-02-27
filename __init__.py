@@ -2,11 +2,12 @@ from datetime import timedelta
 import logging
 
 from aiohttp import ClientSession
+import voluptuous as vol
 
+from homeassistant.const import Platform
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.helpers import config_validation as cv
-import voluptuous as vol
 
 DOMAIN = "multicontrol"
 
@@ -26,6 +27,8 @@ async def async_setup(hass, config):
     hass.data["multicontrol"] = {"coordinator": MulticontrolCoordinator(hass, config)}
     hass.helpers.discovery.load_platform(Platform.CLIMATE, DOMAIN, {}, config)
     hass.helpers.discovery.load_platform(Platform.VALVE, DOMAIN, {}, config)
+    hass.helpers.discovery.load_platform(Platform.SENSOR, DOMAIN, {}, config)
+    # hass.helpers.discovery.load_platform(Platform.BINARY_SENSOR, DOMAIN, {}, config)
     return True
 
 
@@ -109,6 +112,8 @@ class MulticontrolCoordinator(DataUpdateCoordinator):
                 "temp_setpoint": params["temp_setpoint"],
                 # fan params
                 "fan_speed": params.get("fan_speed"),
+                "caq_out_t": params.get("caq_out_t"),
+                "caq_out_h": params.get("caq_out_h"),
             }
         return nodes
 
