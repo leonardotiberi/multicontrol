@@ -65,7 +65,7 @@ class MulticontrolSensor(CoordinatorEntity, SensorEntity):  # noqa: D101
         self._attr_unique_id = unique_id
 
         self._attr_device_class = device_class
-        self._attr_unit_of_measurement = um
+        self._attr_native_unit_of_measurement = um
 
         self.data = {}
         self.sensor = sensor
