@@ -43,12 +43,12 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
 
         config_temp = node["config"].get("temp_setpoint", None)
         if config_temp is not None:
-            self._attr_target_temperature_high = config_temp["bounds"]["max"]
-            self._attr_target_temperature_low = config_temp["bounds"]["min"]
+            self._attr_target_temperature_high = 32 #config_temp["bounds"]["max"]
+            self._attr_target_temperature_low = 16 #config_temp["bounds"]["min"]
             self._attr_target_temperature_step = config_temp["bounds"]["step"]
 
-            self._attr_max_temp = config_temp["bounds"]["max"]
-            self._attr_min_temp = config_temp["bounds"]["min"]
+            self._attr_max_temp = 32 #config_temp["bounds"]["max"]
+            self._attr_min_temp = 16 #config_temp["bounds"]["min"]
 
         if fan_support:
             self._attr_fan_modes = ("off", "low", "medium", "high")
