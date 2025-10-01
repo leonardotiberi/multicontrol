@@ -4,13 +4,13 @@ import logging
 from aiohttp import ClientSession
 import voluptuous as vol
 
-from homeassistant.const import Platform
-from homeassistant.helpers import discovery
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-DOMAIN = "multicontrol"
+from .const import DOMAIN, PLATFORMS
 
 _LOGGER = logging.getLogger(DOMAIN)
 
@@ -24,20 +24,27 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def async_setup(hass, config):
-    hass.data["multicontrol"] = {"coordinator": MulticontrolCoordinator(hass, config)}
-    for platform in [Platform.CLIMATE, Platform.VALVE, Platform.SENSOR]:
-        await hass.async_create_task(
-            discovery.async_load_platform(hass, platform, DOMAIN, {}, config)
-        )
-    # hass.helpers.discovery.load_platform(Platform.BINARY_SENSOR, DOMAIN, {}, config)
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    coordinator = MulticontrolCoordinator(hass, entry)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    await coordinator.async_config_entry_first_refresh()
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unload_ok
 
 
 class MulticontrolCoordinator(DataUpdateCoordinator):
     session: ClientSession
 
-    def __init__(self, hass, config):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         super().__init__(
             hass,
             _LOGGER,
@@ -46,12 +53,8 @@ class MulticontrolCoordinator(DataUpdateCoordinator):
         )
         self.session = async_get_clientsession(hass)
 
-        c = config.get(DOMAIN)
-        if c is None:
-            _LOGGER.error("Configurazione non trovataper il dominio {DOMAIN}")
-
-        self.username = c["username"]
-        self.password = c["password"]
+        self.username = entry.data["username"]
+        self.password = entry.data["password"]
         self.api_url = "https://api.rainmaker.espressif.com/v1/"
         self.api_token = ""
 

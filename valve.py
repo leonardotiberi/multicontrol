@@ -1,26 +1,28 @@
 from __future__ import annotations
 
 from homeassistant.components.valve import ValveDeviceClass, ValveEntity, ValveState
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import DOMAIN
 
-async def async_setup_platform(  # noqa: D103
+
+async def async_setup_entry(  # noqa: D103
     hass: HomeAssistant,
-    config: ConfigType,
-    add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
-    if discovery_info is None:
-        return
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    nodes = await coordinator.getNodes()
 
-    nodes = await hass.data["multicontrol"]["coordinator"].getNodes()
+    entities = []
     for idx, node in nodes.items():
-        add_entities(
-            [MulticontrolValve(hass.data["multicontrol"]["coordinator"], idx, node)]
-        )
+        entities.append(MulticontrolValve(coordinator, idx, node))
+
+    async_add_entities(entities)
 
 
 # https://developers.home-assistant.io/docs/core/entity/valve/
@@ -29,15 +31,25 @@ class MulticontrolValve(CoordinatorEntity, ValveEntity):  # noqa: D101
         super().__init__(coordinator, context=idx)
 
         self.idx = idx
+        self.name = f"Termostato {node['name']}"
         self._available = False
 
-        self._attr_name = f"Valvola riscaldamento {node["name"]}"
+        self._attr_name = f"Valvola riscaldamento {node['name']}"
         self._attr_unique_id = f"multicontrol_valve_{idx}"
 
         self._attr_reports_position = False
         self._attr_device_class = ValveDeviceClass.WATER
 
         self.data = {}
+
+    @property
+    def device_info(self):
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.idx)},
+            name=self.name,
+            manufacturer="Zehnder",
+            model="Multicontrol",
+        )
 
     @property
     def available(self) -> bool:  # noqa: D102

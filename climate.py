@@ -2,27 +2,29 @@ from __future__ import annotations
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import ClimateEntityFeature, HVACMode
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import DOMAIN
 
-async def async_setup_platform(  # noqa: D103
+
+async def async_setup_entry(  # noqa: D103
     hass: HomeAssistant,
-    config: ConfigType,
-    add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
-    if discovery_info is None:
-        return
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    nodes = await coordinator.getNodes()
 
-    nodes = await hass.data["multicontrol"]["coordinator"].getNodes()
+    entities = []
     for idx, node in nodes.items():
-        add_entities(
-            [MulticontrolClimate(hass.data["multicontrol"]["coordinator"], idx, node)]
-        )
+        entities.append(MulticontrolClimate(coordinator, idx, node))
+
+    async_add_entities(entities)
 
 
 class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
@@ -30,11 +32,12 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
         super().__init__(coordinator, context=idx)
 
         self.idx = idx
+        self.name = f"Termostato {node['name']}"
         self._available = False
 
         fan_support = node["config"].get("fan_speed", None) is not None
 
-        self._attr_name = f"Termostato {node["name"]}"
+        self._attr_name = f"Termostato {node['name']}"
         self._attr_unique_id = f"multicontrol_climate_{idx}"
 
         self._attr_hvac_modes = ["off", "cool", "heat"]
@@ -59,6 +62,15 @@ class MulticontrolClimate(CoordinatorEntity, ClimateEntity):  # noqa: D101
             self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
         self.data = {}
+
+    @property
+    def device_info(self):
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.idx)},
+            name=self.name,
+            manufacturer="Zehnder",
+            model="Multicontrol",
+        )
 
     @property
     def available(self) -> bool:  # noqa: D102

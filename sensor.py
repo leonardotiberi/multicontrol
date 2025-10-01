@@ -1,54 +1,54 @@
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import DOMAIN
 
-async def async_setup_platform(  # noqa: D103
+
+async def async_setup_entry(  # noqa: D103
     hass: HomeAssistant,
     config: ConfigType,
-    add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
-    if discovery_info is None:
-        return
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    nodes = await coordinator.getNodes()
 
-    nodes = await hass.data["multicontrol"]["coordinator"].getNodes()
+    entities = []
     for idx, node in nodes.items():
         if idx != "7CDFA198F1AE":
             continue
 
         if "caq_out_t" in node:
-            add_entities(
-                [
-                    MulticontrolSensor(
-                        hass.data["multicontrol"]["coordinator"],
-                        idx,
-                        "VMC Temperatura esterna",
-                        f"multicontrol_out_t_{idx}",
-                        SensorDeviceClass.TEMPERATURE,
-                        "caq_out_t",
-                        "°C",
-                    )
-                ]
+            entities.append(
+                MulticontrolSensor(
+                    coordinator,
+                    idx,
+                    "VMC Temperatura esterna",
+                    f"multicontrol_out_t_{idx}",
+                    SensorDeviceClass.TEMPERATURE,
+                    "caq_out_t",
+                    "°C",
+                )
             )
         if "caq_out_h" in node:
-            add_entities(
-                [
-                    MulticontrolSensor(
-                        hass.data["multicontrol"]["coordinator"],
-                        idx,
-                        "VMC Umidità esterna",
-                        f"multicontrol_out_h_{idx}",
-                        SensorDeviceClass.HUMIDITY,
-                        "caq_out_h",
-                        "%",
-                    )
-                ]
+            entities.append(
+                MulticontrolSensor(
+                    coordinator,
+                    idx,
+                    "VMC Umidità esterna",
+                    f"multicontrol_out_h_{idx}",
+                    SensorDeviceClass.HUMIDITY,
+                    "caq_out_h",
+                    "%",
+                )
             )
+    async_add_entities(entities)
 
 
 # https://developers.home-assistant.io/docs/core/entity/sensor/
